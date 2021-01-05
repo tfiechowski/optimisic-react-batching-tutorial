@@ -1,0 +1,170 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Optimistic batching should do a batch update 1`] = `
+Array [
+  Object {
+    "id": "1",
+    "liked": false,
+    "title": "Photo #1",
+  },
+  Object {
+    "id": "2",
+    "liked": false,
+    "title": "Photo #2",
+  },
+  Object {
+    "id": "3",
+    "liked": false,
+    "title": "Photo #3",
+  },
+  Object {
+    "id": "4",
+    "liked": false,
+    "title": "Photo #4",
+  },
+  Object {
+    "id": "5",
+    "liked": false,
+    "title": "Photo #5",
+  },
+]
+`;
+
+exports[`Optimistic batching should do a batch update 2`] = `
+Array [
+  Object {
+    "id": "1",
+    "liked": true,
+    "pending": false,
+    "title": "Photo #1",
+  },
+  Object {
+    "id": "2",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #2",
+  },
+  Object {
+    "id": "3",
+    "liked": true,
+    "pending": false,
+    "title": "Photo #3",
+  },
+  Object {
+    "id": "4",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #4",
+  },
+  Object {
+    "id": "5",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #5",
+  },
+]
+`;
+
+exports[`Optimistic batching should mark items as pending while API call is being processed 1`] = `
+Array [
+  Object {
+    "id": "1",
+    "liked": true,
+    "pending": true,
+    "title": "Photo #1",
+  },
+  Object {
+    "id": "2",
+    "liked": true,
+    "pending": true,
+    "title": "Photo #2",
+  },
+]
+`;
+
+exports[`Optimistic batching should mark items as pending while API call is being processed 2`] = `
+Array [
+  Object {
+    "id": "1",
+    "liked": true,
+    "pending": false,
+    "title": "Photo #1",
+  },
+  Object {
+    "id": "2",
+    "liked": true,
+    "pending": false,
+    "title": "Photo #2",
+  },
+  Object {
+    "id": "3",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #3",
+  },
+  Object {
+    "id": "4",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #4",
+  },
+  Object {
+    "id": "5",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #5",
+  },
+]
+`;
+
+exports[`Optimistic batching should revert items after failed API call 1`] = `
+Array [
+  Object {
+    "id": "1",
+    "liked": true,
+    "pending": true,
+    "title": "Photo #1",
+  },
+  Object {
+    "id": "2",
+    "liked": true,
+    "pending": true,
+    "title": "Photo #2",
+  },
+]
+`;
+
+exports[`Optimistic batching should revert items after failed API call 2`] = `
+Array [
+  Object {
+    "id": "1",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #1",
+  },
+  Object {
+    "id": "2",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #2",
+  },
+  Object {
+    "id": "3",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #3",
+  },
+  Object {
+    "id": "4",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #4",
+  },
+  Object {
+    "id": "5",
+    "liked": false,
+    "pending": false,
+    "title": "Photo #5",
+  },
+]
+`;
