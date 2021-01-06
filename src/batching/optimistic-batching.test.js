@@ -14,6 +14,50 @@ const DEFAULT_PHOTOS = [
 const TIME_WITHIN_BATCH_UPDATE_THRESHOLD = DEBOUNCED_BATCH_TIMEOUT - 100;
 const TIME_TO_TRIGGER_BATCH_UPDATE = DEBOUNCED_BATCH_TIMEOUT + 100;
 
+function renderComponent({ onUpdate }) {
+  const { result, waitForNextUpdate } = renderHook(() =>
+    usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
+  );
+
+  function getPhotos() {
+    return result.current.photos;
+  }
+
+  function getLikedPhotos() {
+    return result.current.photos.filter((photo) => photo.liked);
+  }
+
+  function getPendingPhotos() {
+    return result.current.photos.filter((photo) => photo.pending);
+  }
+
+  function likePhotos(photoIDs = []) {
+    const photosToLike = getPhotos()
+      .filter((photo) => photoIDs.includes(photo.id))
+      .map((photo) => ({ ...photo, liked: true }));
+    return result.current.handleEdit(photosToLike);
+  }
+
+  async function advanceTimeToTriggerBatchUpdate() {
+    await act(async () => {
+      await jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
+    });
+  }
+
+  return {
+    getPhotos,
+    getLikedPhotos,
+    getPendingPhotos,
+    waitForNextUpdate,
+    likePhotos: async (photoIDs) => {
+      await act(async () => {
+        await likePhotos(photoIDs);
+      });
+    },
+    advanceTimeToTriggerBatchUpdate,
+  };
+}
+
 describe("Optimistic batching", () => {
   beforeEach(() => {
     jest.useFakeTimers("modern");
@@ -21,133 +65,101 @@ describe("Optimistic batching", () => {
 
   it("should do an optimistic update immediately", async () => {
     const onUpdate = () => new Promise((resolve) => setTimeout(resolve, 2000));
-    const { result, waitForNextUpdate } = renderHook(() =>
-      usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
-    );
-    function getLikedPhotosNumber() {
-      return result.current.photos.filter((photo) => photo.liked).length;
-    }
-    function getPendingPhotosNumber() {
-      return result.current.photos.filter((photo) => photo.pending).length;
-    }
+    const {
+      getLikedPhotos,
+      getPendingPhotos,
+      waitForNextUpdate,
+      likePhotos,
+    } = renderComponent({ onUpdate });
 
-    act(() => {
-      result.current.handleEdit([
-        { id: "1", liked: true },
-        { id: "3", liked: true },
-      ]);
-    });
+    await likePhotos(["1", "3"]);
 
-    expect(getLikedPhotosNumber()).toBe(2);
-    expect(getPendingPhotosNumber()).toBe(0);
+    expect(getLikedPhotos().length).toBe(2);
+    expect(getPendingPhotos().length).toBe(0);
 
     await act(async () => {
       jest.advanceTimersByTime(1000);
     });
 
-    expect(getLikedPhotosNumber()).toBe(2);
-    expect(getPendingPhotosNumber()).toBe(2);
+    expect(getLikedPhotos().length).toBe(2);
+    expect(getPendingPhotos().length).toBe(2);
 
     await act(async () => {
       jest.runAllTimers();
       await waitForNextUpdate();
     });
 
-    expect(getLikedPhotosNumber()).toBe(2);
-    expect(getPendingPhotosNumber()).toBe(0);
+    expect(getLikedPhotos().length).toBe(2);
+    expect(getPendingPhotos().length).toBe(0);
   });
 
   it("should do a batch update", async () => {
     const onUpdate = () => true;
-    const { result, waitForNextUpdate } = renderHook(() =>
-      usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
-    );
-
-    expect(result.current.photos).toMatchSnapshot();
-
-    act(() => {
-      result.current.handleEdit([
-        { id: "1", liked: true },
-        { id: "3", liked: true },
-      ]);
+    const { waitForNextUpdate, getPhotos, likePhotos } = renderComponent({
+      onUpdate,
     });
+
+    expect(getPhotos()).toMatchSnapshot();
+
+    await likePhotos(["1", "3"]);
 
     await act(async () => {
       jest.runAllTimers();
       await waitForNextUpdate();
     });
 
-    expect(result.current.photos).toMatchSnapshot();
+    expect(getPhotos()).toMatchSnapshot();
   });
 
   it("should debounce batch update", async () => {
     const onUpdate = () => true;
-    const { result, waitForNextUpdate } = renderHook(() =>
-      usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
-    );
-    function getLikedPhotosNumber() {
-      return result.current.photos.filter((photo) => photo.liked).length;
-    }
-    function getPendingPhotosNumber() {
-      return result.current.photos.filter((photo) => photo.pending).length;
-    }
+    const {
+      waitForNextUpdate,
+      likePhotos,
+      getLikedPhotos,
+      getPendingPhotos,
+    } = renderComponent({ onUpdate });
 
-    act(() => {
-      result.current.handleEdit([
-        { id: "1", liked: true },
-        { id: "2", liked: true },
-      ]);
-    });
+    await likePhotos(["1", "2"]);
 
     await act(async () => {
       jest.advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
     });
 
-    expect(getLikedPhotosNumber()).toBe(2);
-    expect(getPendingPhotosNumber()).toBe(0);
+    expect(getLikedPhotos().length).toBe(2);
+    expect(getPendingPhotos().length).toBe(0);
 
-    act(() => {
-      result.current.handleEdit([
-        { id: "3", liked: true },
-        { id: "4", liked: true },
-      ]);
-    });
+    await likePhotos(["3", "4"]);
 
     await act(async () => {
       jest.advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
     });
 
-    expect(getLikedPhotosNumber()).toBe(4);
-    expect(getPendingPhotosNumber()).toBe(0);
+    expect(getLikedPhotos().length).toBe(4);
+    expect(getPendingPhotos().length).toBe(0);
 
     await act(async () => {
       jest.runAllTimers();
       await waitForNextUpdate();
     });
 
-    expect(getLikedPhotosNumber()).toBe(4);
-    expect(getPendingPhotosNumber()).toBe(0);
+    expect(getLikedPhotos().length).toBe(4);
+    expect(getPendingPhotos().length).toBe(0);
   });
 
   it("should mark items as pending while API call is being processed", async () => {
     const onUpdate = () => new Promise((resolve) => setTimeout(resolve, 2000));
-    const { result, waitForNextUpdate } = renderHook(() =>
-      usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
-    );
-    function getPendingPhotos() {
-      return result.current.photos.filter((photo) => photo.pending);
-    }
+    const {
+      waitForNextUpdate,
+      likePhotos,
+      getPhotos,
+      getPendingPhotos,
+      advanceTimeToTriggerBatchUpdate,
+    } = renderComponent({ onUpdate });
 
-    act(() => {
-      result.current.handleEdit([
-        { id: "1", liked: true },
-        { id: "2", liked: true },
-      ]);
-    });
+    await likePhotos(["1", "2"]);
 
-    act(() => {
-      jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
-    });
+    await advanceTimeToTriggerBatchUpdate();
 
     expect(getPendingPhotos()).toMatchSnapshot();
 
@@ -156,28 +168,22 @@ describe("Optimistic batching", () => {
       await waitForNextUpdate();
     });
 
-    expect(result.current.photos).toMatchSnapshot();
+    expect(getPhotos()).toMatchSnapshot();
   });
 
   it("should revert items after failed API call", async () => {
     const onUpdate = () => new Promise((_, reject) => setTimeout(reject, 2000));
-    const { result, waitForNextUpdate } = renderHook(() =>
-      usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
-    );
-    function getPendingPhotos() {
-      return result.current.photos.filter((photo) => photo.pending);
-    }
+    const {
+      waitForNextUpdate,
+      likePhotos,
+      getPhotos,
+      getPendingPhotos,
+      advanceTimeToTriggerBatchUpdate,
+    } = renderComponent({ onUpdate });
 
-    act(() => {
-      result.current.handleEdit([
-        { id: "1", liked: true },
-        { id: "2", liked: true },
-      ]);
-    });
+    await likePhotos(["1", "2"]);
 
-    act(() => {
-      jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
-    });
+    await advanceTimeToTriggerBatchUpdate();
 
     expect(getPendingPhotos()).toMatchSnapshot();
 
@@ -186,7 +192,7 @@ describe("Optimistic batching", () => {
       await waitForNextUpdate();
     });
 
-    expect(result.current.photos).toMatchSnapshot();
+    expect(getPhotos()).toMatchSnapshot();
   });
 
   it("should do two concurrent batch updates", async () => {
@@ -196,52 +202,36 @@ describe("Optimistic batching", () => {
         mockAPICall();
         setTimeout(resolve, 2000);
       });
-    const { result, waitForNextUpdate } = renderHook(() =>
-      usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
-    );
-    function getLikedPhotosNumber() {
-      return result.current.photos.filter((photo) => photo.liked).length;
-    }
-    function getPendingPhotosNumber() {
-      return result.current.photos.filter((photo) => photo.pending).length;
-    }
+    const {
+      waitForNextUpdate,
+      likePhotos,
+      getLikedPhotos,
+      getPendingPhotos,
+      advanceTimeToTriggerBatchUpdate,
+    } = renderComponent({ onUpdate });
 
-    act(() => {
-      result.current.handleEdit([
-        { id: "1", liked: true },
-        { id: "2", liked: true },
-      ]);
-    });
+    await likePhotos(["1", "2"]);
 
-    act(() => {
-      jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
-    });
+    await advanceTimeToTriggerBatchUpdate();
 
-    expect(getLikedPhotosNumber()).toBe(2);
-    expect(getPendingPhotosNumber()).toBe(2);
+    expect(getLikedPhotos().length).toBe(2);
+    expect(getPendingPhotos().length).toBe(2);
     expect(mockAPICall).toBeCalledTimes(1);
 
-    act(() => {
-      result.current.handleEdit([
-        { id: "3", liked: true },
-        { id: "4", liked: true },
-      ]);
-    });
+    await likePhotos(["3", "4"]);
 
-    await act(async () => {
-      await jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
-    });
+    await advanceTimeToTriggerBatchUpdate();
 
-    expect(getLikedPhotosNumber()).toBe(4);
-    expect(getPendingPhotosNumber()).toBe(4);
+    expect(getLikedPhotos().length).toBe(4);
+    expect(getPendingPhotos().length).toBe(4);
     expect(mockAPICall).toBeCalledTimes(2);
 
     await act(async () => {
       await jest.advanceTimersByTime(1500);
     });
 
-    expect(getLikedPhotosNumber()).toBe(4);
-    expect(getPendingPhotosNumber()).toBe(2);
+    expect(getLikedPhotos().length).toBe(4);
+    expect(getPendingPhotos().length).toBe(2);
     expect(mockAPICall).toBeCalledTimes(2);
 
     await act(async () => {
@@ -249,8 +239,8 @@ describe("Optimistic batching", () => {
       await waitForNextUpdate();
     });
 
-    expect(getLikedPhotosNumber()).toBe(4);
-    expect(getPendingPhotosNumber()).toBe(0);
+    expect(getLikedPhotos().length).toBe(4);
+    expect(getPendingPhotos().length).toBe(0);
     expect(mockAPICall).toBeCalledTimes(2);
   });
 });
