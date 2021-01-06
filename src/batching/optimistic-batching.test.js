@@ -38,9 +38,15 @@ function renderComponent({ onUpdate }) {
     return result.current.handleEdit(photosToLike);
   }
 
+  async function advanceTimersByTime(time) {
+    await act(async () => {
+      await jest.advanceTimersByTime(time);
+    });
+  }
+
   async function advanceTimeToTriggerBatchUpdate() {
     await act(async () => {
-      await jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
+      await advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
     });
   }
 
@@ -55,6 +61,7 @@ function renderComponent({ onUpdate }) {
       });
     },
     advanceTimeToTriggerBatchUpdate,
+    advanceTimersByTime,
   };
 }
 
@@ -70,6 +77,7 @@ describe("Optimistic batching", () => {
       getPendingPhotos,
       waitForNextUpdate,
       likePhotos,
+      advanceTimersByTime,
     } = renderComponent({ onUpdate });
 
     await likePhotos(["1", "3"]);
@@ -77,9 +85,7 @@ describe("Optimistic batching", () => {
     expect(getLikedPhotos().length).toBe(2);
     expect(getPendingPhotos().length).toBe(0);
 
-    await act(async () => {
-      jest.advanceTimersByTime(1000);
-    });
+    await advanceTimersByTime(1000);
 
     expect(getLikedPhotos().length).toBe(2);
     expect(getPendingPhotos().length).toBe(2);
@@ -118,22 +124,19 @@ describe("Optimistic batching", () => {
       likePhotos,
       getLikedPhotos,
       getPendingPhotos,
+      advanceTimersByTime,
     } = renderComponent({ onUpdate });
 
     await likePhotos(["1", "2"]);
 
-    await act(async () => {
-      jest.advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
-    });
+    await advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
 
     expect(getLikedPhotos().length).toBe(2);
     expect(getPendingPhotos().length).toBe(0);
 
     await likePhotos(["3", "4"]);
 
-    await act(async () => {
-      jest.advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
-    });
+    await advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
 
     expect(getLikedPhotos().length).toBe(4);
     expect(getPendingPhotos().length).toBe(0);
@@ -208,6 +211,7 @@ describe("Optimistic batching", () => {
       getLikedPhotos,
       getPendingPhotos,
       advanceTimeToTriggerBatchUpdate,
+      advanceTimersByTime,
     } = renderComponent({ onUpdate });
 
     await likePhotos(["1", "2"]);
@@ -226,9 +230,7 @@ describe("Optimistic batching", () => {
     expect(getPendingPhotos().length).toBe(4);
     expect(mockAPICall).toBeCalledTimes(2);
 
-    await act(async () => {
-      await jest.advanceTimersByTime(1500);
-    });
+    await advanceTimersByTime(1500);
 
     expect(getLikedPhotos().length).toBe(4);
     expect(getPendingPhotos().length).toBe(2);
