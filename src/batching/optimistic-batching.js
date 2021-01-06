@@ -147,7 +147,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     [setPendingUpdates]
   );
 
-  const updatePhotosDebounced = useDebouncedCallback(
+  const performUpdates = useDebouncedCallback(
     async () => {
       if (!hasPendingUpdates(pendingUpdates)) {
         return;
@@ -184,13 +184,13 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
         })
       );
 
-      updatePhotosDebounced.callback();
+      performUpdates.callback();
     },
     [
       photos,
       pendingUpdates,
       setPendingUpdates,
-      updatePhotosDebounced,
+      performUpdates,
       getItemsToResetAndUpdate,
     ]
   );
