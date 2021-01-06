@@ -29,17 +29,24 @@ function getPhotosToUpdate(photos, batchUpdates) {
     .filter((item) => item !== null);
 }
 
+function addPendingFlagToPhotos(photos) {
+  return photos.map((photo) => ({ ...photo, pending: false }));
+}
+
 export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
-  const [photos, setPhotos] = useState(initialPhotos);
+  const [photos, setPhotos] = useState(addPendingFlagToPhotos(initialPhotos));
   const [batchUpdates, setBatchUpdates] = useState({});
 
   const resetPendingPhotos = useCallback(
     (_batchUpdates) => {
       setPhotos((_photos) =>
         _photos.map((photo) => {
-          const item = _batchUpdates[photo.id] || photo;
+          const updatedItem = _batchUpdates[photo.id];
+          if (updatedItem) {
+            return Object.assign({}, updatedItem, { pending: false });
+          }
 
-          return Object.assign({}, item, { pending: false });
+          return photo;
         })
       );
     },

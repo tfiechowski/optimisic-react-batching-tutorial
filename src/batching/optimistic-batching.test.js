@@ -188,4 +188,69 @@ describe("Optimistic batching", () => {
 
     expect(result.current.photos).toMatchSnapshot();
   });
+
+  it("should do two concurrent batch updates", async () => {
+    const mockAPICall = jest.fn();
+    const onUpdate = () =>
+      new Promise((resolve) => {
+        mockAPICall();
+        setTimeout(resolve, 2000);
+      });
+    const { result, waitForNextUpdate } = renderHook(() =>
+      usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
+    );
+    function getLikedPhotosNumber() {
+      return result.current.photos.filter((photo) => photo.liked).length;
+    }
+    function getPendingPhotosNumber() {
+      return result.current.photos.filter((photo) => photo.pending).length;
+    }
+
+    act(() => {
+      result.current.handleEdit([
+        { id: "1", liked: true },
+        { id: "2", liked: true },
+      ]);
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
+    });
+
+    expect(getLikedPhotosNumber()).toBe(2);
+    expect(getPendingPhotosNumber()).toBe(2);
+    expect(mockAPICall).toBeCalledTimes(1);
+
+    act(() => {
+      result.current.handleEdit([
+        { id: "3", liked: true },
+        { id: "4", liked: true },
+      ]);
+    });
+
+    await act(async () => {
+      await jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
+    });
+
+    expect(getLikedPhotosNumber()).toBe(4);
+    expect(getPendingPhotosNumber()).toBe(4);
+    expect(mockAPICall).toBeCalledTimes(2);
+
+    await act(async () => {
+      await jest.advanceTimersByTime(1500);
+    });
+
+    expect(getLikedPhotosNumber()).toBe(4);
+    expect(getPendingPhotosNumber()).toBe(2);
+    expect(mockAPICall).toBeCalledTimes(2);
+
+    await act(async () => {
+      jest.runAllTimers();
+      await waitForNextUpdate();
+    });
+
+    expect(getLikedPhotosNumber()).toBe(4);
+    expect(getPendingPhotosNumber()).toBe(0);
+    expect(mockAPICall).toBeCalledTimes(2);
+  });
 });
