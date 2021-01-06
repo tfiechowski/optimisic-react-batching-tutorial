@@ -1,7 +1,6 @@
-import { useCallback } from "react";
-import { usePhotos } from "./optimistic-batching";
 import { renderHook } from "@testing-library/react-hooks";
 import TestRenderer from "react-test-renderer";
+import { usePhotos } from "./optimistic-batching";
 const { act } = TestRenderer;
 
 const DEFAULT_PHOTOS = [
