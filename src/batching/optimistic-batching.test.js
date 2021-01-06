@@ -24,11 +24,15 @@ function renderComponent({ onUpdate }) {
   }
 
   function getLikedPhotos() {
-    return result.current.photos.filter((photo) => photo.liked);
+    return getPhotos().filter((photo) => photo.liked);
+  }
+
+  function getDislikedPhotos() {
+    return getPhotos().filter((photo) => !photo.liked);
   }
 
   function getPendingPhotos() {
-    return result.current.photos.filter((photo) => photo.pending);
+    return getPhotos().filter((photo) => photo.pending);
   }
 
   function likePhotos(photoIDs = []) {
@@ -36,6 +40,13 @@ function renderComponent({ onUpdate }) {
       .filter((photo) => photoIDs.includes(photo.id))
       .map((photo) => ({ ...photo, liked: true }));
     return result.current.handleEdit(photosToLike);
+  }
+
+  function dislikePhotos(photoIDs = []) {
+    const photosToDislike = getPhotos()
+      .filter((photo) => photoIDs.includes(photo.id))
+      .map((photo) => ({ ...photo, liked: false }));
+    return result.current.handleEdit(photosToDislike);
   }
 
   async function advanceTimersByTime(time) {
@@ -53,11 +64,17 @@ function renderComponent({ onUpdate }) {
   return {
     getPhotos,
     getLikedPhotos,
+    getDislikedPhotos,
     getPendingPhotos,
     waitForNextUpdate,
     likePhotos: async (photoIDs) => {
       await act(async () => {
         await likePhotos(photoIDs);
+      });
+    },
+    dislikePhotos: async (photoIDs) => {
+      await act(async () => {
+        await dislikePhotos(photoIDs);
       });
     },
     advanceTimeToTriggerBatchUpdate,
@@ -244,5 +261,41 @@ describe("Optimistic batching", () => {
     expect(getLikedPhotos().length).toBe(4);
     expect(getPendingPhotos().length).toBe(0);
     expect(mockAPICall).toBeCalledTimes(2);
+  });
+
+  it("should not call an API when items came back to original state after modifications", async () => {
+    const mockAPICall = jest.fn();
+    const onUpdate = () =>
+      new Promise((resolve) => {
+        mockAPICall();
+        setTimeout(resolve, 2000);
+      });
+    const {
+      likePhotos,
+      dislikePhotos,
+      getLikedPhotos,
+      getDislikedPhotos,
+      getPendingPhotos,
+      advanceTimeToTriggerBatchUpdate,
+      advanceTimersByTime,
+    } = renderComponent({ onUpdate });
+
+    await likePhotos(["1", "2"]);
+
+    expect(getLikedPhotos().length).toBe(2);
+    expect(getPendingPhotos().length).toBe(0);
+
+    await advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
+
+    await dislikePhotos(["1", "2"]);
+
+    expect(getDislikedPhotos().length).toBe(5);
+    expect(getPendingPhotos().length).toBe(0);
+
+    await advanceTimeToTriggerBatchUpdate();
+
+    expect(getDislikedPhotos().length).toBe(5);
+    expect(getPendingPhotos().length).toBe(0);
+    expect(mockAPICall).not.toHaveBeenCalled();
   });
 });
