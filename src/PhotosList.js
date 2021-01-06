@@ -47,17 +47,17 @@ export function PhotosList() {
     );
   }, []);
 
-  const { photos, handleEdit } = usePhotos({
+  const { photos, handleChange } = usePhotos({
     photos: DEFAULT_PHOTOS,
     onUpdate,
   });
 
   function handleLike(photo) {
-    handleEdit([Object.assign({}, photo, { liked: true })]);
+    handleChange([Object.assign({}, photo, { liked: true })]);
   }
 
   function handleDislike(photo) {
-    handleEdit([Object.assign({}, photo, { liked: false })]);
+    handleChange([Object.assign({}, photo, { liked: false })]);
   }
 
   return (
