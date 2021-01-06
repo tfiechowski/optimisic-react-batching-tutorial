@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`Optimistic batching should do a batch update 1`] = `
+exports[`Optimistic batching usePhotos should do a batch update 1`] = `
 Array [
   Object {
     "id": "1",
@@ -35,7 +35,7 @@ Array [
 ]
 `;
 
-exports[`Optimistic batching should do a batch update 2`] = `
+exports[`Optimistic batching usePhotos should do a batch update 2`] = `
 Array [
   Object {
     "id": "1",
@@ -70,7 +70,7 @@ Array [
 ]
 `;
 
-exports[`Optimistic batching should mark items as pending while API call is being processed 1`] = `
+exports[`Optimistic batching usePhotos should mark items as pending while API call is being processed 1`] = `
 Array [
   Object {
     "id": "1",
@@ -87,7 +87,7 @@ Array [
 ]
 `;
 
-exports[`Optimistic batching should mark items as pending while API call is being processed 2`] = `
+exports[`Optimistic batching usePhotos should mark items as pending while API call is being processed 2`] = `
 Array [
   Object {
     "id": "1",
@@ -122,7 +122,7 @@ Array [
 ]
 `;
 
-exports[`Optimistic batching should revert items after failed API call 1`] = `
+exports[`Optimistic batching usePhotos should revert items after failed API call 1`] = `
 Array [
   Object {
     "id": "1",
@@ -139,7 +139,7 @@ Array [
 ]
 `;
 
-exports[`Optimistic batching should revert items after failed API call 2`] = `
+exports[`Optimistic batching usePhotos should revert items after failed API call 2`] = `
 Array [
   Object {
     "id": "1",
