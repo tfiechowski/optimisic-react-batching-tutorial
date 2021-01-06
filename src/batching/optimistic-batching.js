@@ -5,14 +5,14 @@ import { useCallback, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce/lib";
 
 export const DEBOUNCED_BATCH_TIMEOUT = 500;
-const PENDING_FLAG_KEY = "pending";
+const LOCKED_FLAG_KEY = "locked";
 
 export function isUpdateNeeded(original, itemUpdate) {
   if (typeof original.id !== "string" || typeof itemUpdate.id !== "string") {
     throw new Error("Passed ID that is not a string");
   }
 
-  const fieldsToOmit = [PENDING_FLAG_KEY];
+  const fieldsToOmit = [LOCKED_FLAG_KEY];
   const keysToCompare = Object.keys(itemUpdate).filter(
     (key) => ![...fieldsToOmit, "id"].includes(key)
   );
@@ -42,7 +42,7 @@ function getPhotosToUpdate(photos, itemUpdates) {
 }
 
 function addPendingFlagToPhotos(photos) {
-  return photos.map((photo) => ({ ...photo, [PENDING_FLAG_KEY]: false }));
+  return photos.map((photo) => ({ ...photo, [LOCKED_FLAG_KEY]: false }));
 }
 
 function hasPendingUpdates(batchUpdates) {
@@ -54,13 +54,13 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   const [pendingUpdates, setPendingUpdates] = useState({});
 
   const resetPendingPhotos = useCallback(
-    (_batchUpdates) => {
+    (_pendingUpdates) => {
       setPhotos((_photos) =>
         _photos.map((photo) => {
-          const updatedItem = _batchUpdates[photo.id];
+          const updatedItem = _pendingUpdates[photo.id];
           if (updatedItem) {
             return Object.assign({}, updatedItem, {
-              [PENDING_FLAG_KEY]: false,
+              [LOCKED_FLAG_KEY]: false,
             });
           }
 
@@ -73,34 +73,34 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
 
   const revertPhotosToOriginalState = useCallback(
     (originalPhotos) => {
-      setPhotos((_photos) => {
-        return _photos.map((item) => {
+      setPhotos((_photos) =>
+        _photos.map((item) => {
           const originalItem =
             originalPhotos.find((photo) => photo.id === item.id) || item;
 
-          return Object.assign({}, originalItem, { [PENDING_FLAG_KEY]: false });
-        });
-      });
+          return Object.assign({}, originalItem, { [LOCKED_FLAG_KEY]: false });
+        })
+      );
     },
     [setPhotos]
   );
 
-  const applyUpdates = useCallback(
-    (_batchUpdates) => {
-      setPhotos((_photos) => {
-        return _photos.map((photo) => {
-          const key = photo.id;
-          const batchUpdateItem = _batchUpdates[key];
+  const applyUpdatesToPhotos = useCallback(
+    (_pendingUpdates) => {
+      setPhotos((_photos) =>
+        _photos.map((photo) => {
+          const batchUpdateItem = _pendingUpdates[photo.id];
 
           if (batchUpdateItem) {
-            // Pending will be used to block the item from clicking on it again
+            // Locked flag will indicate that item is being processed now
+            // (sent in an API request and waiting for a response)
             return Object.assign({}, batchUpdateItem, {
-              [PENDING_FLAG_KEY]: true,
+              [LOCKED_FLAG_KEY]: true,
             });
           }
           return photo;
-        });
-      });
+        })
+      );
     },
     [setPhotos]
   );
@@ -136,19 +136,25 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     []
   );
 
+  const clearPendingUpdates = useCallback(
+    (pendingUpdateKeys) => {
+      setPendingUpdates((_pendingUpdates) =>
+        update(_pendingUpdates, {
+          $unset: pendingUpdateKeys,
+        })
+      );
+    },
+    [setPendingUpdates]
+  );
+
   const updatePhotosDebounced = useDebouncedCallback(
     async () => {
       if (!hasPendingUpdates(pendingUpdates)) {
         return;
       }
 
-      setPendingUpdates((_batchUpdates) =>
-        update(_batchUpdates, {
-          $unset: Object.keys(pendingUpdates),
-        })
-      );
-
-      applyUpdates(pendingUpdates);
+      clearPendingUpdates(Object.keys(pendingUpdates));
+      applyUpdatesToPhotos(pendingUpdates);
 
       try {
         const photosToUpdate = getPhotosToUpdate(photos, pendingUpdates);
@@ -190,11 +196,9 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   );
 
   const currentPhotos = useMemo(() => {
-    return photos.map((photo) => {
-      const key = photo.id;
-
-      return Object.assign({}, pendingUpdates[key] || photo);
-    });
+    return photos.map((photo) =>
+      Object.assign({}, pendingUpdates[photo.id] || photo)
+    );
   }, [photos, pendingUpdates]);
 
   return {

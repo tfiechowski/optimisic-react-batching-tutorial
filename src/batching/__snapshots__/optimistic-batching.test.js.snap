@@ -5,31 +5,31 @@ Array [
   Object {
     "id": "1",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #1",
   },
   Object {
     "id": "2",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #2",
   },
   Object {
     "id": "3",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #3",
   },
   Object {
     "id": "4",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #4",
   },
   Object {
     "id": "5",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #5",
   },
 ]
@@ -40,31 +40,31 @@ Array [
   Object {
     "id": "1",
     "liked": true,
-    "pending": false,
+    "locked": false,
     "title": "Photo #1",
   },
   Object {
     "id": "2",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #2",
   },
   Object {
     "id": "3",
     "liked": true,
-    "pending": false,
+    "locked": false,
     "title": "Photo #3",
   },
   Object {
     "id": "4",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #4",
   },
   Object {
     "id": "5",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #5",
   },
 ]
@@ -75,13 +75,13 @@ Array [
   Object {
     "id": "1",
     "liked": true,
-    "pending": true,
+    "locked": true,
     "title": "Photo #1",
   },
   Object {
     "id": "2",
     "liked": true,
-    "pending": true,
+    "locked": true,
     "title": "Photo #2",
   },
 ]
@@ -92,31 +92,31 @@ Array [
   Object {
     "id": "1",
     "liked": true,
-    "pending": false,
+    "locked": false,
     "title": "Photo #1",
   },
   Object {
     "id": "2",
     "liked": true,
-    "pending": false,
+    "locked": false,
     "title": "Photo #2",
   },
   Object {
     "id": "3",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #3",
   },
   Object {
     "id": "4",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #4",
   },
   Object {
     "id": "5",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #5",
   },
 ]
@@ -127,13 +127,13 @@ Array [
   Object {
     "id": "1",
     "liked": true,
-    "pending": true,
+    "locked": true,
     "title": "Photo #1",
   },
   Object {
     "id": "2",
     "liked": true,
-    "pending": true,
+    "locked": true,
     "title": "Photo #2",
   },
 ]
@@ -144,31 +144,31 @@ Array [
   Object {
     "id": "1",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #1",
   },
   Object {
     "id": "2",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #2",
   },
   Object {
     "id": "3",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #3",
   },
   Object {
     "id": "4",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #4",
   },
   Object {
     "id": "5",
     "liked": false,
-    "pending": false,
+    "locked": false,
     "title": "Photo #5",
   },
 ]
