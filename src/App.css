@@ -11,3 +11,12 @@ body {
   justify-content: center;
   align-items: center;
 }
+
+.btn.btn-lg {
+  padding: 2px;
+  line-height: 36px;
+  font-size: 30px;
+  font-weight: bold;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}

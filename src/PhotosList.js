@@ -43,7 +43,7 @@ const Photo = styled.div`
 export function PhotosList() {
   const onUpdate = useCallback(() => {
     return new Promise((resolve) =>
-      setTimeout(resolve, getRandomBetween(2000, 2500))
+      setTimeout(resolve, getRandomBetween(1000, 1500))
     );
   }, []);
 
@@ -66,20 +66,20 @@ export function PhotosList() {
         <PhotoWrapper key={photo.id}>
           <Photo src={photo.src}></Photo>
 
-          {photo.pending ? (
-            <button className="btn btn-sm btn-light" disabled>
+          {photo.locked ? (
+            <button className="btn btn-lg btn-light" disabled>
               Updating ...
             </button>
           ) : photo.liked ? (
             <button
-              className="btn btn-sm btn-danger"
+              className="btn btn-lg btn-danger"
               onClick={() => handleDislike(photo.id)}
             >
               Dislike
             </button>
           ) : (
             <button
-              className="btn btn-sm btn-success"
+              className="btn btn-lg btn-success"
               onClick={() => handleLike(photo.id)}
             >
               Like
