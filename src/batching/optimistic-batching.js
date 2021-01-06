@@ -1,41 +1,57 @@
 /* eslint-disable react/prop-types */
 import update from "immutability-helper";
-import { isEqual, omit } from "lodash";
+import { fromPairs, isEqual, partition, pick } from "lodash";
 import { useCallback, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce/lib";
 
 export const DEBOUNCED_BATCH_TIMEOUT = 500;
+const PENDING_FLAG_KEY = "pending";
 
-function areEqual(original, updated) {
-  const fieldsToOmit = ["pending"];
-  return isEqual(omit(original, fieldsToOmit), omit(updated, fieldsToOmit));
+export function isUpdateNeeded(original, itemUpdate) {
+  if (typeof original.id !== "string" || typeof itemUpdate.id !== "string") {
+    throw new Error("Passed ID that is not a string");
+  }
+
+  const fieldsToOmit = [PENDING_FLAG_KEY];
+  const keysToCompare = Object.keys(itemUpdate).filter(
+    (key) => ![...fieldsToOmit, "id"].includes(key)
+  );
+
+  return !isEqual(
+    pick(original, keysToCompare),
+    pick(itemUpdate, keysToCompare)
+  );
 }
 
-function getPhotosToUpdate(photos, batchUpdates) {
+function getPhotosToUpdate(photos, itemUpdates) {
   function getPhoto(id) {
     return photos.find((photo) => photo.id === id);
   }
 
-  return Object.values(batchUpdates)
-    .map((batchUpdate) => {
-      const original = getPhoto(batchUpdate.id);
+  return Object.values(itemUpdates)
+    .map((itemUpdate) => {
+      const original = getPhoto(itemUpdate.id);
 
-      if (areEqual(original, batchUpdate)) {
+      if (!isUpdateNeeded(original, itemUpdate)) {
         return null;
       }
 
-      return batchUpdate;
+      return itemUpdate;
     })
     .filter((item) => item !== null);
 }
 
 function addPendingFlagToPhotos(photos) {
-  return photos.map((photo) => ({ ...photo, pending: false }));
+  return photos.map((photo) => ({ ...photo, [PENDING_FLAG_KEY]: false }));
+}
+
+function hasPendingUpdates(batchUpdates) {
+  return Object.keys(batchUpdates).length > 0;
 }
 
 export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   const [photos, setPhotos] = useState(addPendingFlagToPhotos(initialPhotos));
-  const [batchUpdates, setBatchUpdates] = useState({});
+  const [pendingUpdates, setPendingUpdates] = useState({});
 
   const resetPendingPhotos = useCallback(
     (_batchUpdates) => {
@@ -43,7 +59,9 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
         _photos.map((photo) => {
           const updatedItem = _batchUpdates[photo.id];
           if (updatedItem) {
-            return Object.assign({}, updatedItem, { pending: false });
+            return Object.assign({}, updatedItem, {
+              [PENDING_FLAG_KEY]: false,
+            });
           }
 
           return photo;
@@ -54,83 +72,90 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   );
 
   const revertPhotosToOriginalState = useCallback(
-    (photosSnapshot) => {
+    (originalPhotos) => {
       setPhotos((_photos) => {
         return _photos.map((item) => {
           const originalItem =
-            photosSnapshot.find((photo) => photo.id === item.id) || item;
+            originalPhotos.find((photo) => photo.id === item.id) || item;
 
-          return Object.assign({}, originalItem, { pending: false });
+          return Object.assign({}, originalItem, { [PENDING_FLAG_KEY]: false });
         });
       });
     },
     [setPhotos]
   );
 
-  const updateItems = useCallback(
+  const applyUpdates = useCallback(
     (_batchUpdates) => {
       setPhotos((_photos) => {
-        const resultPhotos = _photos.map((photo) => {
+        return _photos.map((photo) => {
           const key = photo.id;
           const batchUpdateItem = _batchUpdates[key];
 
           if (batchUpdateItem) {
             // Pending will be used to block the item from clicking on it again
-            return Object.assign({}, batchUpdateItem, { pending: true });
+            return Object.assign({}, batchUpdateItem, {
+              [PENDING_FLAG_KEY]: true,
+            });
           }
           return photo;
         });
-
-        return resultPhotos;
       });
     },
     [setPhotos]
   );
 
-  const getItemsToResetAndUpdate = useCallback((items, _photos) => {
-    return items.reduce(
-      (acc, item) => {
-        const key = item.id;
-        const originalPhoto = _photos.find((photo) => photo.id === item.id);
+  const getItemsToResetAndUpdate = useCallback(
+    (itemsUpdates, originalPhotos) => {
+      const originalPhotosLookup = fromPairs(
+        originalPhotos.map((originalPhoto) => [originalPhoto.id, originalPhoto])
+      );
+      function getOriginalPhoto(id) {
+        return originalPhotosLookup[id];
+      }
 
-        if (areEqual(originalPhoto, item)) {
-          return update(acc, { toReset: { $push: [key] } });
-        }
+      const [toUpdate, toReset] = partition(itemsUpdates, (itemUpdate) => {
+        const originalPhoto = getOriginalPhoto(itemUpdate.id);
 
-        const updatedItem = Object.assign({}, originalPhoto, item);
+        return isUpdateNeeded(originalPhoto, itemUpdate);
+      });
 
-        return update(acc, {
-          toUpdate: {
-            [key]: { $set: updatedItem },
-          },
-        });
-      },
-      { toReset: [], toUpdate: {} }
-    );
-  }, []);
+      return {
+        toReset: toReset.map((item) => item.id),
+        toUpdate: fromPairs(
+          toUpdate
+            .map((item) => {
+              const originalPhoto = getOriginalPhoto(item.id);
+              const updatedItem = Object.assign({}, originalPhoto, item);
+              return updatedItem;
+            })
+            .map((item) => [item.id, item])
+        ),
+      };
+    },
+    []
+  );
 
   const updatePhotosDebounced = useDebouncedCallback(
     async () => {
-      if (Object.keys(batchUpdates).length === 0) {
+      if (!hasPendingUpdates(pendingUpdates)) {
         return;
       }
 
-      setBatchUpdates((_batchUpdates) =>
+      setPendingUpdates((_batchUpdates) =>
         update(_batchUpdates, {
-          $unset: Object.keys(batchUpdates),
+          $unset: Object.keys(pendingUpdates),
         })
       );
 
-      updateItems(batchUpdates);
+      applyUpdates(pendingUpdates);
 
-      // Calling the API
       try {
-        const photosToUpdate = getPhotosToUpdate(photos, batchUpdates);
+        const photosToUpdate = getPhotosToUpdate(photos, pendingUpdates);
 
         await onUpdate(photosToUpdate);
 
-        // Reset pending
-        resetPendingPhotos(batchUpdates);
+        resetPendingPhotos(pendingUpdates);
       } catch (exception) {
         revertPhotosToOriginalState(photos);
       }
@@ -139,12 +164,15 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     { maxWait: 2500 }
   );
 
-  const handleMultipleChange = useCallback(
-    (items) => {
-      const { toReset, toUpdate } = getItemsToResetAndUpdate(items, photos);
+  const handleChange = useCallback(
+    (itemsUpdates) => {
+      const { toReset, toUpdate } = getItemsToResetAndUpdate(
+        itemsUpdates,
+        photos
+      );
 
-      setBatchUpdates(
-        update(batchUpdates, {
+      setPendingUpdates(
+        update(pendingUpdates, {
           $unset: toReset,
           $merge: toUpdate,
         })
@@ -154,8 +182,8 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     },
     [
       photos,
-      batchUpdates,
-      setBatchUpdates,
+      pendingUpdates,
+      setPendingUpdates,
       updatePhotosDebounced,
       getItemsToResetAndUpdate,
     ]
@@ -165,13 +193,13 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     return photos.map((photo) => {
       const key = photo.id;
 
-      return Object.assign({}, batchUpdates[key] || photo);
+      return Object.assign({}, pendingUpdates[key] || photo);
     });
-  }, [photos, batchUpdates]);
+  }, [photos, pendingUpdates]);
 
   return {
-    handleEdit: handleMultipleChange,
-    batchUpdates,
+    handleChange,
+    batchUpdates: pendingUpdates,
     photos: currentPhotos,
   };
 }
