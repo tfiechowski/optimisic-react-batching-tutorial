@@ -1,6 +1,10 @@
 import { renderHook } from "@testing-library/react-hooks";
 import TestRenderer from "react-test-renderer";
-import { usePhotos, DEBOUNCED_BATCH_TIMEOUT } from "./optimistic-batching";
+import {
+  usePhotos,
+  DEBOUNCED_BATCH_TIMEOUT,
+  isUpdateNeeded,
+} from "./optimistic-batching";
 const { act } = TestRenderer;
 
 const DEFAULT_PHOTOS = [
@@ -38,15 +42,15 @@ function renderComponent({ onUpdate }) {
   function likePhotos(photoIDs = []) {
     const photosToLike = getPhotos()
       .filter((photo) => photoIDs.includes(photo.id))
-      .map((photo) => ({ ...photo, liked: true }));
-    return result.current.handleEdit(photosToLike);
+      .map((photo) => ({ id: photo.id, liked: true }));
+    return result.current.handleChange(photosToLike);
   }
 
   function dislikePhotos(photoIDs = []) {
     const photosToDislike = getPhotos()
       .filter((photo) => photoIDs.includes(photo.id))
-      .map((photo) => ({ ...photo, liked: false }));
-    return result.current.handleEdit(photosToDislike);
+      .map((photo) => ({ id: photo.id, liked: false }));
+    return result.current.handleChange(photosToDislike);
   }
 
   async function advanceTimersByTime(time) {
@@ -83,6 +87,47 @@ function renderComponent({ onUpdate }) {
 }
 
 describe("Optimistic batching", () => {
+  describe("isUpdateNeeded", () => {
+    it.each([
+      [
+        { id: "1", liked: true, title: "Back in Black" },
+        { id: "1", liked: false },
+      ],
+      [
+        { id: "1", liked: true, title: "Hells Bells" },
+        { id: "1", liked: true, title: "Back in Black" },
+      ],
+    ])("should require an update", (item, itemUpdate) => {
+      expect(isUpdateNeeded(item, itemUpdate)).toBeTruthy();
+    });
+
+    it.each([
+      [
+        { id: "1", liked: true, title: "Back in Black" },
+        { id: "1", liked: true },
+      ],
+      [
+        { id: "1", liked: true, title: "Hells Bells" },
+        { id: "1", liked: true, title: "Hells Bells" },
+      ],
+    ])("should not require an update", (item, itemUpdate) => {
+      expect(isUpdateNeeded(item, itemUpdate)).toBeFalsy();
+    });
+
+    it.each([
+      [
+        { id: 1, liked: true, title: "Back in Black" },
+        { id: "1", liked: true },
+      ],
+      [
+        { id: "1", liked: true, title: "Hells Bells" },
+        { id: 1, liked: true, title: "Hells Bells" },
+      ],
+    ])("should throw when id is not a string", () => {
+      expect(isUpdateNeeded).toThrowError();
+    });
+  });
+
   describe("usePhotos", () => {
     beforeEach(() => {
       jest.useFakeTimers("modern");
