@@ -63,9 +63,9 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
       // Calling the API
       try {
         const photosToUpdate = getPhotosToUpdate(photos, batchUpdates);
-        
+
         await onUpdate(photosToUpdate);
-        
+
         // Reset pending
         setPhotos((_photos) =>
           _photos.map((photo) => {
@@ -78,7 +78,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
         setPhotos((_photos) => {
           return _photos.map((item) => {
             const originalItem =
-            photos.find((photo) => photo.id === item.id) || item;
+              photos.find((photo) => photo.id === item.id) || item;
 
             return Object.assign({}, originalItem, { pending: false });
           });
@@ -110,7 +110,6 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
         },
         { toReset: [], toUpdate: {} }
       );
-
 
       setBatchUpdates(
         update(batchUpdates, {
