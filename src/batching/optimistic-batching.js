@@ -4,7 +4,7 @@ import { isEqual, omit } from "lodash";
 import { useCallback, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce/lib";
 
-const DEBOUNCED_BATCH_TIMEOUT = 500;
+export const DEBOUNCED_BATCH_TIMEOUT = 500;
 
 function areEqual(original, updated) {
   const fieldsToOmit = ["pending"];

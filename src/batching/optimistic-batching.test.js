@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react-hooks";
 import TestRenderer from "react-test-renderer";
-import { usePhotos } from "./optimistic-batching";
+import { usePhotos, DEBOUNCED_BATCH_TIMEOUT } from "./optimistic-batching";
 const { act } = TestRenderer;
 
 const DEFAULT_PHOTOS = [
@@ -10,6 +10,9 @@ const DEFAULT_PHOTOS = [
   { id: "4", title: "Photo #4", liked: false },
   { id: "5", title: "Photo #5", liked: false },
 ];
+
+const TIME_WITHIN_BATCH_UPDATE_THRESHOLD = DEBOUNCED_BATCH_TIMEOUT - 100;
+const TIME_TO_TRIGGER_BATCH_UPDATE = DEBOUNCED_BATCH_TIMEOUT + 100;
 
 describe("Optimistic batching", () => {
   beforeEach(() => {
@@ -97,7 +100,7 @@ describe("Optimistic batching", () => {
     });
 
     await act(async () => {
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
     });
 
     expect(getLikedPhotosNumber()).toBe(2);
@@ -111,7 +114,7 @@ describe("Optimistic batching", () => {
     });
 
     await act(async () => {
-      jest.advanceTimersByTime(300);
+      jest.advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
     });
 
     expect(getLikedPhotosNumber()).toBe(4);
@@ -143,7 +146,7 @@ describe("Optimistic batching", () => {
     });
 
     act(() => {
-      jest.advanceTimersByTime(600);
+      jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
     });
 
     expect(getPendingPhotos()).toMatchSnapshot();
@@ -173,7 +176,7 @@ describe("Optimistic batching", () => {
     });
 
     act(() => {
-      jest.advanceTimersByTime(600);
+      jest.advanceTimersByTime(TIME_TO_TRIGGER_BATCH_UPDATE);
     });
 
     expect(getPendingPhotos()).toMatchSnapshot();
