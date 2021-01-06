@@ -6,7 +6,7 @@ import { useDebouncedCallback } from "use-debounce/lib";
 
 const DEBOUNCED_BATCH_TIMEOUT = 500;
 
-function compareItems(original, updated) {
+function areEqual(original, updated) {
   const fieldsToOmit = ["pending"];
   return isEqual(omit(original, fieldsToOmit), omit(updated, fieldsToOmit));
 }
@@ -20,7 +20,7 @@ function getPhotosToUpdate(photos, batchUpdates) {
     .map((batchUpdate) => {
       const original = getPhoto(batchUpdate.id);
 
-      if (compareItems(original, batchUpdate)) {
+      if (areEqual(original, batchUpdate)) {
         return null;
       }
 
@@ -96,7 +96,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
           const key = item.id;
           const originalPhoto = photos.find((photo) => photo.id === item.id);
 
-          if (compareItems(originalPhoto, item)) {
+          if (areEqual(originalPhoto, item)) {
             return update(acc, { toReset: { $push: [key] } });
           }
 
