@@ -43,14 +43,14 @@ function renderComponent({ onUpdate }) {
     const photosToLike = getPhotos()
       .filter((photo) => photoIDs.includes(photo.id))
       .map((photo) => ({ id: photo.id, liked: true }));
-    return result.current.handleChange(photosToLike);
+    return result.current.updatePhotos(photosToLike);
   }
 
   function dislikePhotos(photoIDs = []) {
     const photosToDislike = getPhotos()
       .filter((photo) => photoIDs.includes(photo.id))
       .map((photo) => ({ id: photo.id, liked: false }));
-    return result.current.handleChange(photosToDislike);
+    return result.current.updatePhotos(photosToDislike);
   }
 
   async function advanceTimersByTime(time) {

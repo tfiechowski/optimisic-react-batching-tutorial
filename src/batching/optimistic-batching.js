@@ -164,7 +164,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     { maxWait: 2500 }
   );
 
-  const handleChange = useCallback(
+  const handleUpdatePhotos = useCallback(
     (itemsUpdates) => {
       const { toReset, toUpdate } = getItemsToResetAndUpdate(
         itemsUpdates,
@@ -198,8 +198,8 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   }, [photos, pendingUpdates]);
 
   return {
-    handleChange,
-    batchUpdates: pendingUpdates,
+    updatePhotos: handleUpdatePhotos,
+    pendingUpdates,
     photos: currentPhotos,
   };
 }

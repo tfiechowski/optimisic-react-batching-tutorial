@@ -47,17 +47,17 @@ export function PhotosList() {
     );
   }, []);
 
-  const { photos, handleChange } = usePhotos({
+  const { photos, updatePhotos } = usePhotos({
     photos: DEFAULT_PHOTOS,
     onUpdate,
   });
 
-  function handleLike(photo) {
-    handleChange([Object.assign({}, photo, { liked: true })]);
+  function handleLike(photoId) {
+    updatePhotos([{ id: photoId, liked: true }]);
   }
 
-  function handleDislike(photo) {
-    handleChange([Object.assign({}, photo, { liked: false })]);
+  function handleDislike(photoId) {
+    updatePhotos([{ id: photoId, liked: false }]);
   }
 
   return (
@@ -73,14 +73,14 @@ export function PhotosList() {
           ) : photo.liked ? (
             <button
               className="btn btn-sm btn-danger"
-              onClick={() => handleDislike(photo)}
+              onClick={() => handleDislike(photo.id)}
             >
               Dislike
             </button>
           ) : (
             <button
               className="btn btn-sm btn-success"
-              onClick={() => handleLike(photo)}
+              onClick={() => handleLike(photo.id)}
             >
               Like
             </button>
