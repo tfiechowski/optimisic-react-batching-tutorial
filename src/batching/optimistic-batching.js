@@ -33,6 +33,75 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   const [photos, setPhotos] = useState(initialPhotos);
   const [batchUpdates, setBatchUpdates] = useState({});
 
+  const resetPendingPhotos = useCallback(
+    (_batchUpdates) => {
+      setPhotos((_photos) =>
+        _photos.map((photo) => {
+          const item = _batchUpdates[photo.id] || photo;
+
+          return Object.assign({}, item, { pending: false });
+        })
+      );
+    },
+    [setPhotos]
+  );
+
+  const revertPhotosToOriginalState = useCallback(
+    (photosSnapshot) => {
+      setPhotos((_photos) => {
+        return _photos.map((item) => {
+          const originalItem =
+            photosSnapshot.find((photo) => photo.id === item.id) || item;
+
+          return Object.assign({}, originalItem, { pending: false });
+        });
+      });
+    },
+    [setPhotos]
+  );
+
+  const updateItems = useCallback(
+    (_batchUpdates) => {
+      setPhotos((_photos) => {
+        const resultPhotos = _photos.map((photo) => {
+          const key = photo.id;
+          const batchUpdateItem = _batchUpdates[key];
+
+          if (batchUpdateItem) {
+            // Pending will be used to block the item from clicking on it again
+            return Object.assign({}, batchUpdateItem, { pending: true });
+          }
+          return photo;
+        });
+
+        return resultPhotos;
+      });
+    },
+    [setPhotos]
+  );
+
+  const getItemsToResetAndUpdate = useCallback((items, _photos) => {
+    return items.reduce(
+      (acc, item) => {
+        const key = item.id;
+        const originalPhoto = _photos.find((photo) => photo.id === item.id);
+
+        if (areEqual(originalPhoto, item)) {
+          return update(acc, { toReset: { $push: [key] } });
+        }
+
+        const updatedItem = Object.assign({}, originalPhoto, item);
+
+        return update(acc, {
+          toUpdate: {
+            [key]: { $set: updatedItem },
+          },
+        });
+      },
+      { toReset: [], toUpdate: {} }
+    );
+  }, []);
+
   const updatePhotosDebounced = useDebouncedCallback(
     async () => {
       if (Object.keys(batchUpdates).length === 0) {
@@ -45,20 +114,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
         })
       );
 
-      setPhotos((_photos) => {
-        const resultPhotos = _photos.map((photo) => {
-          const key = photo.id;
-          const batchUpdateItem = batchUpdates[key];
-
-          if (batchUpdateItem) {
-            // Pending will be used to block the item from clicking on it again
-            return Object.assign({}, batchUpdateItem, { pending: true });
-          }
-          return photo;
-        });
-
-        return resultPhotos;
-      });
+      updateItems(batchUpdates);
 
       // Calling the API
       try {
@@ -67,22 +123,9 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
         await onUpdate(photosToUpdate);
 
         // Reset pending
-        setPhotos((_photos) =>
-          _photos.map((photo) => {
-            const item = batchUpdates[photo.id] || photo;
-
-            return Object.assign({}, item, { pending: false });
-          })
-        );
+        resetPendingPhotos(batchUpdates);
       } catch (exception) {
-        setPhotos((_photos) => {
-          return _photos.map((item) => {
-            const originalItem =
-              photos.find((photo) => photo.id === item.id) || item;
-
-            return Object.assign({}, originalItem, { pending: false });
-          });
-        });
+        revertPhotosToOriginalState(photos);
       }
     },
     DEBOUNCED_BATCH_TIMEOUT,
@@ -91,25 +134,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
 
   const handleMultipleChange = useCallback(
     (items) => {
-      const { toReset, toUpdate } = items.reduce(
-        (acc, item) => {
-          const key = item.id;
-          const originalPhoto = photos.find((photo) => photo.id === item.id);
-
-          if (areEqual(originalPhoto, item)) {
-            return update(acc, { toReset: { $push: [key] } });
-          }
-
-          const updatedItem = Object.assign({}, originalPhoto, item);
-
-          return update(acc, {
-            toUpdate: {
-              [key]: { $set: updatedItem },
-            },
-          });
-        },
-        { toReset: [], toUpdate: {} }
-      );
+      const { toReset, toUpdate } = getItemsToResetAndUpdate(items, photos);
 
       setBatchUpdates(
         update(batchUpdates, {
@@ -120,7 +145,13 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
 
       updatePhotosDebounced.callback();
     },
-    [photos, batchUpdates, setBatchUpdates, updatePhotosDebounced]
+    [
+      photos,
+      batchUpdates,
+      setBatchUpdates,
+      updatePhotosDebounced,
+      getItemsToResetAndUpdate,
+    ]
   );
 
   return {
