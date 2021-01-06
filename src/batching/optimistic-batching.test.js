@@ -16,6 +16,44 @@ describe("Optimistic batching", () => {
     jest.useFakeTimers("modern");
   });
 
+  it("should do an optimistic update immediately", async () => {
+    const onUpdate = () => new Promise((resolve) => setTimeout(resolve, 2000));
+    const { result, waitForNextUpdate } = renderHook(() =>
+      usePhotos({ photos: DEFAULT_PHOTOS, onUpdate })
+    );
+    function getLikedPhotosNumber() {
+      return result.current.photos.filter((photo) => photo.liked).length;
+    }
+    function getPendingPhotosNumber() {
+      return result.current.photos.filter((photo) => photo.pending).length;
+    }
+
+    act(() => {
+      result.current.handleEdit([
+        { id: "1", liked: true },
+        { id: "3", liked: true },
+      ]);
+    });
+
+    expect(getLikedPhotosNumber()).toBe(2);
+    expect(getPendingPhotosNumber()).toBe(0);
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(getLikedPhotosNumber()).toBe(2);
+    expect(getPendingPhotosNumber()).toBe(2);
+
+    await act(async () => {
+      jest.runAllTimers();
+      await waitForNextUpdate();
+    });
+
+    expect(getLikedPhotosNumber()).toBe(2);
+    expect(getPendingPhotosNumber()).toBe(0);
+  });
+
   it("should do a batch update", async () => {
     const onUpdate = () => true;
     const { result, waitForNextUpdate } = renderHook(() =>
@@ -47,6 +85,9 @@ describe("Optimistic batching", () => {
     function getLikedPhotosNumber() {
       return result.current.photos.filter((photo) => photo.liked).length;
     }
+    function getPendingPhotosNumber() {
+      return result.current.photos.filter((photo) => photo.pending).length;
+    }
 
     act(() => {
       result.current.handleEdit([
@@ -59,7 +100,8 @@ describe("Optimistic batching", () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(getLikedPhotosNumber()).toBe(0);
+    expect(getLikedPhotosNumber()).toBe(2);
+    expect(getPendingPhotosNumber()).toBe(0);
 
     act(() => {
       result.current.handleEdit([
@@ -72,7 +114,8 @@ describe("Optimistic batching", () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(getLikedPhotosNumber()).toBe(0);
+    expect(getLikedPhotosNumber()).toBe(4);
+    expect(getPendingPhotosNumber()).toBe(0);
 
     await act(async () => {
       jest.runAllTimers();
@@ -80,6 +123,7 @@ describe("Optimistic batching", () => {
     });
 
     expect(getLikedPhotosNumber()).toBe(4);
+    expect(getPendingPhotosNumber()).toBe(0);
   });
 
   it("should mark items as pending while API call is being processed", async () => {

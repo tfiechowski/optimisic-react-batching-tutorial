@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import update from "immutability-helper";
 import { isEqual, omit } from "lodash";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce/lib";
 
 const DEBOUNCED_BATCH_TIMEOUT = 500;
@@ -154,9 +154,17 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     ]
   );
 
+  const currentPhotos = useMemo(() => {
+    return photos.map((photo) => {
+      const key = photo.id;
+
+      return Object.assign({}, batchUpdates[key] || photo);
+    });
+  }, [photos, batchUpdates]);
+
   return {
     handleEdit: handleMultipleChange,
     batchUpdates,
-    photos,
+    photos: currentPhotos,
   };
 }
