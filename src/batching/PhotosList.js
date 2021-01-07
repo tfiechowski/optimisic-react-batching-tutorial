@@ -56,7 +56,7 @@ export function PhotosList() {
     updatePhotos([{ id: photoId, liked: true }]);
   }
 
-  function handleDislike(photoId) {
+  function handleUnlike(photoId) {
     updatePhotos([{ id: photoId, liked: false }]);
   }
 
@@ -73,9 +73,9 @@ export function PhotosList() {
           ) : photo.liked ? (
             <button
               className="btn btn-lg btn-outline-danger"
-              onClick={() => handleDislike(photo.id)}
+              onClick={() => handleUnlike(photo.id)}
             >
-              Dislike
+              Unlike
             </button>
           ) : (
             <button
