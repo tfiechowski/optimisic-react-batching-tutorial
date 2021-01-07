@@ -36,7 +36,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   const [pendingUpdates, setPendingUpdates] = useState({});
 
   const removePhotosLockedFlag = useCallback(
-    (_pendingUpdates) => {
+    (_pendingUpdates) =>
       setPhotos((_photos) =>
         _photos.map((photo) => {
           const updatedItem = _pendingUpdates[photo.id];
@@ -48,13 +48,12 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
 
           return photo;
         })
-      );
-    },
+      ),
     [setPhotos]
   );
 
   const revertPhotosToOriginalState = useCallback(
-    (originalPhotos) => {
+    (originalPhotos) =>
       setPhotos((_photos) =>
         _photos.map((item) => {
           const originalItem =
@@ -62,13 +61,12 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
 
           return Object.assign({}, originalItem, { [LOCKED_FLAG_KEY]: false });
         })
-      );
-    },
+      ),
     [setPhotos]
   );
 
   const applyUpdatesToPhotos = useCallback(
-    (_pendingUpdates) => {
+    (_pendingUpdates) =>
       setPhotos((_photos) =>
         _photos.map((photo) => {
           const batchUpdateItem = _pendingUpdates[photo.id];
@@ -82,10 +80,13 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
           }
           return photo;
         })
-      );
-    },
+      ),
     [setPhotos]
   );
+
+  const clearPendingUpdates = useCallback(() => setPendingUpdates({}), [
+    setPendingUpdates,
+  ]);
 
   const getItemsToResetAndUpdate = useCallback(
     (itemsUpdates, originalPhotos) => {
@@ -110,29 +111,18 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     []
   );
 
-  const clearPendingUpdates = useCallback(
-    (pendingUpdateKeys) => {
-      setPendingUpdates((_pendingUpdates) =>
-        update(_pendingUpdates, {
-          $unset: pendingUpdateKeys,
-        })
-      );
-    },
-    [setPendingUpdates]
-  );
-
   const performUpdates = useDebouncedCallback(
     async () => {
       if (!hasPendingUpdates(pendingUpdates)) {
         return;
       }
 
-      const pendingUpdatesList = Object.keys(pendingUpdates);
-
-      clearPendingUpdates(pendingUpdatesList);
+      clearPendingUpdates();
       applyUpdatesToPhotos(pendingUpdates);
 
       try {
+        const pendingUpdatesList = Object.keys(pendingUpdates);
+
         await onUpdate(pendingUpdatesList);
 
         removePhotosLockedFlag(pendingUpdates);
