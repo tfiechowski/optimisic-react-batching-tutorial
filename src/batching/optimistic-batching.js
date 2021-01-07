@@ -23,24 +23,6 @@ export function isUpdateNeeded(original, itemUpdate) {
   );
 }
 
-function getPhotosToUpdate(photos, itemUpdates) {
-  function getPhoto(id) {
-    return photos.find((photo) => photo.id === id);
-  }
-
-  return Object.values(itemUpdates)
-    .map((itemUpdate) => {
-      const original = getPhoto(itemUpdate.id);
-
-      if (!isUpdateNeeded(original, itemUpdate)) {
-        return null;
-      }
-
-      return itemUpdate;
-    })
-    .filter((item) => item !== null);
-}
-
 function addPendingFlagToPhotos(photos) {
   return photos.map((photo) => ({ ...photo, [LOCKED_FLAG_KEY]: false }));
 }
@@ -59,7 +41,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
         _photos.map((photo) => {
           const updatedItem = _pendingUpdates[photo.id];
           if (updatedItem) {
-            return Object.assign({}, updatedItem, {
+            return Object.assign({}, photo, {
               [LOCKED_FLAG_KEY]: false,
             });
           }
@@ -94,7 +76,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
           if (batchUpdateItem) {
             // Locked flag will indicate that item is being processed now
             // (sent in an API request and waiting for a response)
-            return Object.assign({}, batchUpdateItem, {
+            return Object.assign({}, photo, batchUpdateItem, {
               [LOCKED_FLAG_KEY]: true,
             });
           }
@@ -122,15 +104,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
 
       return {
         toReset: toReset.map((item) => item.id),
-        toUpdate: fromPairs(
-          toUpdate
-            .map((item) => {
-              const originalPhoto = getOriginalPhoto(item.id);
-              const updatedItem = Object.assign({}, originalPhoto, item);
-              return updatedItem;
-            })
-            .map((item) => [item.id, item])
-        ),
+        toUpdate: fromPairs(toUpdate.map((item) => [item.id, item])),
       };
     },
     []
@@ -157,9 +131,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
       applyUpdatesToPhotos(pendingUpdates);
 
       try {
-        const photosToUpdate = getPhotosToUpdate(photos, pendingUpdates);
-
-        await onUpdate(photosToUpdate);
+        await onUpdate(pendingUpdates);
 
         resetPendingPhotos(pendingUpdates);
       } catch (exception) {
@@ -197,7 +169,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
 
   const currentPhotos = useMemo(() => {
     return photos.map((photo) =>
-      Object.assign({}, pendingUpdates[photo.id] || photo)
+      Object.assign({}, photo, pendingUpdates[photo.id] || {})
     );
   }, [photos, pendingUpdates]);
 
