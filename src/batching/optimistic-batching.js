@@ -35,7 +35,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   const [photos, setPhotos] = useState(addPendingFlagToPhotos(initialPhotos));
   const [pendingUpdates, setPendingUpdates] = useState({});
 
-  const resetPendingPhotos = useCallback(
+  const removePhotosLockedFlag = useCallback(
     (_pendingUpdates) => {
       setPhotos((_photos) =>
         _photos.map((photo) => {
@@ -127,13 +127,15 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
         return;
       }
 
-      clearPendingUpdates(Object.keys(pendingUpdates));
+      const pendingUpdatesList = Object.keys(pendingUpdates);
+
+      clearPendingUpdates(pendingUpdatesList);
       applyUpdatesToPhotos(pendingUpdates);
 
       try {
-        await onUpdate(pendingUpdates);
+        await onUpdate(pendingUpdatesList);
 
-        resetPendingPhotos(pendingUpdates);
+        removePhotosLockedFlag(pendingUpdates);
       } catch (exception) {
         revertPhotosToOriginalState(photos);
       }
