@@ -347,5 +347,47 @@ describe("Optimistic batching", () => {
       expect(getLockedPhotos().length).toBe(0);
       expect(mockAPICall).not.toHaveBeenCalled();
     });
+
+    it("should be idempotent to the same change", async () => {
+      const onUpdate = () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, 2000);
+        });
+      const {
+        likePhotos,
+        getLikedPhotos,
+        getLockedPhotos,
+        advanceTimeToTriggerBatchUpdate,
+        advanceTimersByTime,
+        waitForNextUpdate,
+      } = renderComponent({ onUpdate });
+
+      await likePhotos(["1"]);
+      await likePhotos(["1"]);
+
+      expect(getLikedPhotos().length).toBe(1);
+      expect(getLockedPhotos().length).toBe(0);
+
+      await advanceTimersByTime(TIME_WITHIN_BATCH_UPDATE_THRESHOLD);
+      await likePhotos(["1"]);
+
+      expect(getLikedPhotos().length).toBe(1);
+      expect(getLockedPhotos().length).toBe(0);
+
+      await advanceTimeToTriggerBatchUpdate();
+
+      expect(getLikedPhotos().length).toBe(1);
+      expect(getLockedPhotos().length).toBe(1);
+
+      await likePhotos(["1"]);
+
+      await act(async () => {
+        jest.runAllTimers();
+        await waitForNextUpdate();
+      });
+
+      expect(getLikedPhotos().length).toBe(1);
+      expect(getLockedPhotos().length).toBe(0);
+    });
   });
 });
