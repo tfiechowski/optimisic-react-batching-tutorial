@@ -1,17 +1,13 @@
 import { usePhotos } from "./usePhotos";
 import { useCallback } from "react";
 import styled from "styled-components";
+import { DEFAULT_PHOTOS } from "./data";
+import { UpdatingButton, UnlikeButton, LikeButton } from "./Buttons";
 
 function getRandomBetween(min, max) {
   const diff = max - min;
   return min + Math.floor(Math.random() * diff);
 }
-
-const DEFAULT_PHOTOS = new Array(9).fill(0).map((_, index) => ({
-  id: String(index + 1),
-  src: `${process.env.PUBLIC_URL}/images/${index + 1}.jpeg`,
-  liked: false,
-}));
 
 const PhotoGrid = styled.div`
   flex: 1;
@@ -67,23 +63,11 @@ export function PhotosList() {
           <Photo src={photo.src}></Photo>
 
           {photo.locked ? (
-            <button className="btn btn-lg btn-outline-secondary" disabled>
-              Updating ...
-            </button>
+            <UpdatingButton />
           ) : photo.liked ? (
-            <button
-              className="btn btn-lg btn-outline-danger"
-              onClick={() => handleUnlike(photo.id)}
-            >
-              Unlike
-            </button>
+            <UnlikeButton onUnlike={() => handleUnlike(photo.id)} />
           ) : (
-            <button
-              className="btn btn-lg btn-outline-success"
-              onClick={() => handleLike(photo.id)}
-            >
-              Like
-            </button>
+            <LikeButton onLike={() => handleLike(photo.id)}>Like</LikeButton>
           )}
         </PhotoWrapper>
       ))}
