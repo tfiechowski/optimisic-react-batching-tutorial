@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import "./App.css";
-import { PhotosList } from "./PhotosList";
+import { PhotosList } from "./batching/PhotosList";
 
 const Container = styled.div`
   display: flex;

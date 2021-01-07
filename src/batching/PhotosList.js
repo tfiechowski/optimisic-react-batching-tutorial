@@ -1,4 +1,4 @@
-import { usePhotos } from "./batching/optimistic-batching";
+import { usePhotos } from "./usePhotos";
 import { useCallback } from "react";
 import styled from "styled-components";
 

@@ -4,7 +4,7 @@ import {
   usePhotos,
   DEBOUNCED_BATCH_TIMEOUT,
   isUpdateNeeded,
-} from "./optimistic-batching";
+} from "./usePhotos";
 const { act } = TestRenderer;
 
 const DEFAULT_PHOTOS = [
