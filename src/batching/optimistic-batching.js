@@ -23,7 +23,7 @@ export function isUpdateNeeded(original, itemUpdate) {
   );
 }
 
-function addPendingFlagToPhotos(photos) {
+function addLockedFlagToPhotos(photos) {
   return photos.map((photo) => ({ ...photo, [LOCKED_FLAG_KEY]: false }));
 }
 
@@ -32,7 +32,7 @@ function hasPendingUpdates(batchUpdates) {
 }
 
 export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
-  const [photos, setPhotos] = useState(addPendingFlagToPhotos(initialPhotos));
+  const [photos, setPhotos] = useState(addLockedFlagToPhotos(initialPhotos));
   const [pendingUpdates, setPendingUpdates] = useState({});
 
   const removePhotosLockedFlag = useCallback(
