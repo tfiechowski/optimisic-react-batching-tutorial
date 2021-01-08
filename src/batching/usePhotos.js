@@ -134,7 +134,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
     { maxWait: 2500 }
   );
 
-  const addPendingUpdates = useCallback(
+  const updatePhotos = useCallback(
     (itemsUpdates) => {
       const { toReset, toUpdate } = getItemsToResetAndUpdate(
         itemsUpdates,
@@ -166,7 +166,7 @@ export function usePhotos({ photos: initialPhotos = [], onUpdate }) {
   }, [photos, pendingUpdates]);
 
   return {
-    updatePhotos: addPendingUpdates,
+    updatePhotos,
     pendingUpdates,
     photos: currentPhotos,
   };
